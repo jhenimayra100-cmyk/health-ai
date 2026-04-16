@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Health AI Voice</title>
+
+<style>
+body {
+    font-family: Arial;
+    background:#0b0b0b;
+    color:white;
+    text-align:center;
+    padding:20px;
+}
+
+h2 { color:#00e676; }
+
+textarea {
+    width:90%;
+    height:100px;
+    padding:10px;
+    margin:10px;
+    border-radius:8px;
+    border:none;
+}
+
+button {
+    width:90%;
+    padding:12px;
+    margin:6px;
+    border:none;
+    border-radius:8px;
+    background:#00c853;
+    color:white;
+    font-size:16px;
+}
+
+.box {
+    background:#1e1e1e;
+    padding:15px;
+    margin-top:10px;
+    border-radius:10px;
+    min-height:60px;
+    text-align:left;
+}
+</style>
+</head>
+
+<body>
+
+<h2>🤖 Health AI Voice</h2>
+
+<textarea id="input" placeholder="Fale ou escreva seus sintomas..."></textarea>
+
+<button onclick="gravar()">🎙️ Falar</button>
+<button onclick="analisar()">🤖 Analisar sintomas</button>
+<button onclick="respiracao()">🫁 Testar respiração</button>
+
+<div class="box" id="resposta">Resposta da IA aparecerá aqui...</div>
+
+<script>
+
+//////////////////////////////////////////////////////
+// 🎙️ VOZ → TEXTO
+//////////////////////////////////////////////////////
+function gravar(){
+    let rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    rec.lang = "pt-BR";
+    rec.start();
+
+    rec.onresult = function(e){
+        document.getElementById("input").value =
+        e.results[0][0].transcript;
+    };
+}
+
+//////////////////////////////////////////////////////
+// 🤖 IA SIMPLES (SEM API PRA NÃO DAR ERRO)
+//////////////////////////////////////////////////////
+function analisar(){
+
+    let t = document.getElementById("input").value.toLowerCase();
+    let resposta = "";
+
+    if(t.includes("febre") && t.includes("tosse")){
+        resposta = "🟡 Possível infecção viral. Observe sintomas e hidrate-se.";
+    }
+    else if(t.includes("falta de ar")){
+        resposta = "🔴 ALERTA: procure atendimento médico imediatamente.";
+    }
+    else if(t.includes("dor de cabeça")){
+        resposta = "🟢 Pode ser cansaço ou estresse. Descanse e beba água.";
+    }
+    else{
+        resposta = "🟢 Sintomas analisados. Continue observando seu estado.";
+    }
+
+    document.getElementById("resposta").innerText = resposta;
+
+    falar(resposta);
+}
+
+//////////////////////////////////////////////////////
+// 🔊 VOZ (IA FALANDO)
+//////////////////////////////////////////////////////
+function falar(texto){
+    let fala = new SpeechSynthesisUtterance(texto);
+    fala.lang = "pt-BR";
+    fala.rate = 1;
+    speechSynthesis.speak(fala);
+}
+
+//////////////////////////////////////////////////////
+// 🫁 RESPIRAÇÃO (MICROFONE)
+//////////////////////////////////////////////////////
+function respiracao(){
+
+    navigator.mediaDevices.getUserMedia({ audio: true })
+    .then(stream => {
+
+        const audioCtx = new AudioContext();
+        const mic = audioCtx.createMediaStreamSource(stream);
+        const analyser = audioCtx.createAnalyser();
+
+        mic.connect(analyser);
+        analyser.fftSize = 512;
+
+        const data = new Uint8Array(analyser.frequencyBinCount);
+
+        setInterval(() => {
+
+            analyser.getByteFrequencyData(data);
+
+            let volume = data.reduce((a,b)=>a+b)/data.length;
+
+            if(volume < 20){
+                document.getElementById("resposta").innerText =
+                "😌 Respiração calma";
+            }
+            else if(volume < 50){
+                document.getElementById("resposta").innerText =
+                "😐 Respiração acelerada";
+            }
+            else{
+                document.getElementById("resposta").innerText =
+                "⚠️ Respiração forte";
+            }
+
+        }, 1000);
+
+    })
+    .catch(() => alert("Permita o microfone"));
+
+}
+
+</script>
+
+</body>
+</html>
